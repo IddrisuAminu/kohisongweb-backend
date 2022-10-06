@@ -2,6 +2,7 @@ const User = require("../models/userSchema");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { validateAddUser } = require("../validations/userValidations");
+const {generateToken } = require("../utils/generateToken")
 
 const addUser = async (req, res) => {
   //validate a user
@@ -21,29 +22,61 @@ const addUser = async (req, res) => {
     email: req.body.email,
     password: hashedPassword,
   });
-  await newUser.save();
-  res.status(201).json(newUser);
+ 
+
+  if (newUser) {
+    res.status(200).json({
+      name:newUser.name,
+      email:newUser.email,
+      password:newUser.password,
+      id: newUser._id,
+      token:generateToken( newUser._id)
+    })
+  }
+ await newUser.save();
+ res.status(201).json(User);
+
+
 };
 
-const userSignin = async (req, res) => {
-  //user verification
-  const user = await User.findOne({ email: req.body.email });
-  if (!user) return res.status(404).send("account not found");
 
-  //pasword verification
-  const verifiedPassword = await bcrypt.compare(
-    req.body.password,
-    user.password
-  );
-  if (!verifiedPassword)
-    return res.status(404).send("invalid email or password");
 
-  //assign a token
-  const token_id = jwt.sign({ _id: user._id }, process.env.SECRETE_CODE, {
-    expiresIn: "30d",
-  });
 
-  res.header("authorization", token_id).send(token_id);
-};
 
-module.exports = { addUser, userSignin };
+//user login in 
+async function userSignin(req, res) {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (user) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        res.status(200).json({
+          
+          email: user.email,
+          password: user.password,
+          id: user._id,
+        
+        });
+      } else {
+        res.status(401).json({
+          message: "Invalid password",
+        });
+      }
+    } else {
+      res.status(401).json({
+        message: "Invalid email",
+      });
+    }
+  } catch {
+    res.status(400).json({
+      message: "user not found",
+    });
+  }
+}
+
+
+
+   module.exports = { addUser, userSignin };

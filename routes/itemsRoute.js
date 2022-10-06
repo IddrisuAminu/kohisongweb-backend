@@ -5,7 +5,7 @@ const {
   createItem,
   updateItem,
   deleteItem,
-} = require("../controllers/itemsController");
+} = require("../controllers/ItemsController");
 
 const { protect } = require("../middlewares/authMiddleware");
 
